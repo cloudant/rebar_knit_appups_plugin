@@ -96,7 +96,7 @@ make_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn) ->
             ?INFO("~s.appup exists~n", [AppName]);
         false ->
             Appup = gen_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn),
-            ?CONSOLE("Generated appup for ~s~n", [AppName]),
+            ?CONSOLE("Knit generated appup for ~s~n", [AppName]),
             write_appup(AppupPath, Appup)
     end.
 
