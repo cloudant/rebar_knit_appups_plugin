@@ -18,16 +18,16 @@
 ]).
 
 
--include("knit.hrl").
+-include("rebar_knit_appups_plugin.hrl").
 
 
 % Module attributes:
-% knit_priority - Set a module priority - int() | default (which is 0)
-% knit_extra - Set the value of Extra for code_change
-% knit_depends - Set module dependencies - [atom()]
-% knit_timeout - Set an upgrade timeout - int()>0 | default | infinity
-% knit_purge - Set the purge style - Purge | {PrePurge, PostPerge}
-% knit_apply - Run a function during upgrade [MFA | {Phase, MFA}]
+% rebar_knit_priority - Set a module priority - int() | default (which is 0)
+% rebar_knit_extra - Set the value of Extra for code_change
+% rebar_knit_depends - Set module dependencies - [atom()]
+% rebar_knit_timeout - Set an upgrade timeout - int()>0 | default | infinity
+% rebar_knit_purge - Set the purge style - Purge | {PrePurge, PostPerge}
+% rebar_knit_apply - Run a function during upgrade [MFA | {Phase, MFA}]
 %              where phase is first | immediate | last
 %              or {phase, priority}
 %
@@ -194,7 +194,7 @@ get_priority(Name, Attrs) ->
         undefined ->
             0;
         Else ->
-            ?BAD_CONFIG("Invalid knit_priority in ~s: ~p", [Name, Else])
+            ?ABORT("Invalid knit_priority in ~s: ~p", [Name, Else])
     end.
 
 
@@ -205,7 +205,7 @@ get_extra(Name, Attrs) ->
         undefined ->
             soft;
         Else ->
-            ?BAD_CONFIG("Invalid knit_extra in ~s: ~p", [Name, Else])
+            ?ABORT("Invalid knit_extra in ~s: ~p", [Name, Else])
     end.
 
 
@@ -218,7 +218,7 @@ get_depends(Name, Attrs) ->
                     true ->
                         ok;
                     false ->
-                        ?BAD_CONFIG("Invalid dependency in ~s: ~p", [Name, M])
+                        ?ABORT("Invalid dependency in ~s: ~p", [Name, M])
                 end
             end, Modules),
             Modules;
@@ -238,7 +238,7 @@ get_timeout(Name, Attrs) ->
         undefined ->
             default;
         Else ->
-            ?BAD_CONFIG("Invalid timeout in ~s: ~p", [Name, Else])
+            ?ABORT("Invalid timeout in ~s: ~p", [Name, Else])
     end.
 
 
@@ -255,7 +255,7 @@ get_purge(Name, Attrs) ->
         undefined ->
             {brutal_purge, brutal_purge};
         Else ->
-            ?BAD_CONFIG("Invalid purge in ~s: ~p", [Name, Else])
+            ?ABORT("Invalid purge in ~s: ~p", [Name, Else])
     end.
 
 
@@ -278,7 +278,7 @@ validate_mfa(_Name, {Mod, Fun, Args})
         when is_atom(Mod), is_atom(Fun), is_list(Args) ->
     {Mod, Fun, Args};
 validate_mfa(Name, BadMFA) ->
-    ?BAD_CONFIG("Invalid apply MFA in ~s: ~p", [Name, BadMFA]).
+    ?ABORT("Invalid apply MFA in ~s: ~p", [Name, BadMFA]).
 
 
 validate_phase(_Name, first) ->
@@ -294,7 +294,7 @@ validate_phase(_Name, last) ->
 validate_phase(_Name, {last, P}) when is_integer(P) ->
     {last, P};
 validate_phase(Name, BadPhase) ->
-    ?BAD_CONFIG("Invalid apply phase in ~s: ~p", [Name, BadPhase]).
+    ?ABORT("Invalid apply phase in ~s: ~p", [Name, BadPhase]).
 
 
 get_attr(Name, Attrs) ->

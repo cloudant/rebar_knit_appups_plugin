@@ -14,46 +14,52 @@
 
 
 -export([
-    'knit-appups'/2
+    'pre_generate-appup'/2
 ]).
 
 
--include("rebar.hrl").
+-include("rebar_knit_appups_plugin.hrl").
 
 
-'knit-appups'(Config0, ReltoolFile) ->
-    {Config, RTConfig} = rebar_rel_utils:load_config(Config, ReltoolFile),
+'pre_generate-appup'(Config, ReltoolFile) ->
+    case rebar_rel_utils:is_rel_dir() of
+        {true, _} ->
+            generate(Config, ReltoolFile);
+        false ->
+            {ok, Config}
+    end.
+
+
+generate(Config0, ReltoolFile) ->
+    {Config, RTConfig} = rebar_rel_utils:load_config(Config0, ReltoolFile),
     TargetParentDir = rebar_rel_utils:get_target_parent_dir(Config, RTConfig),
     {Name, _Ver} = rebar_rel_utils:get_reltool_release_info(RTConfig),
 
     OldRelPath0 = rebar_rel_utils:get_previous_release_path(Config),
-    OldRelPath = filename:join([TargetParentDir, PrevRelPath]),
+    OldRelPath = filename:join([TargetParentDir, OldRelPath0]),
+    NewRelPath = filename:join([TargetParentDir, Name]),
+
+    ?DEBUG("Old Rel Path: ~s ~s~n", [Name, OldRelPath]),
     {OldName, OldVer} = rebar_rel_utils:get_rel_release_info(Name, OldRelPath),
 
-    NewRelPath = filename:join([TargetParentDir, Name]),
+    ?DEBUG("New Rel Path: ~s ~s~n", [Name, NewRelPath]),
     {NewName, NewVer} = rebar_rel_utils:get_rel_release_info(Name, NewRelPath),
 
     %% Run some simple checks
     true = rebar_utils:prop_check(NewName == OldName,
-            "Mismatched release names.~n"),
+            "Mismatched release names.~n", []),
     true = rebar_utils:prop_check(NewVer =/= OldVer,
             "No version change between releases.~n", []),
 
-    ToUpgrade = apps_to_upgrade(Name, OldVerPath, NewVerPath),
+    ToUpgrade = apps_to_upgrade(Name, OldRelPath, NewRelPath),
 
     lists:foreach(fun({AppName, OldVsn, NewVsn}) ->
-        make_appup(Name, OldRelPath, NewRelPath, AppName, OldVsn, NewVsn)
-    end, Upgrades),
+        make_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn)
+    end, ToUpgrade),
+
+    ?CONSOLE("Finished generating appups.~n", []),
 
     {ok, Config}.
-
-
-info(help, 'knit-appups') ->
-    ?CONSOLE("Generate appup files.~n"
-             "~n"
-             "Valid command line options:~n"
-             "  previous_release=path~n",
-             []).
 
 
 apps_to_upgrade(Name, OldVerPath, NewVerPath) ->
@@ -77,24 +83,25 @@ apps_to_upgrade(Name, OldVerPath, NewVerPath) ->
 
     % Log the upgrades we've found
     lists:foreach(fun({AppName, OldVsn, NewVsn}) ->
-        ?DEBUG("Upgrading ~s: ~p -> ~p", [Name, OldVsn, NewVsn])
+        ?DEBUG("Upgrading ~s: ~p -> ~p~n", [AppName, OldVsn, NewVsn])
     end, Upgrades),
 
     Upgrades.
 
 
-make_appup(Name, OldRelPath, NewRelPath, AppName, OldVsn, NewVsn) ->
+make_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn) ->
     AppupPath = appup_path(NewRelPath, AppName, NewVsn),
     case filelib:is_regular(AppupPath) of
         true ->
-            ?INFO("~s.appup exists", [AppName]);
+            ?INFO("~s.appup exists~n", [AppName]);
         false ->
-            Appup = make_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn),
+            Appup = gen_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn),
+            ?CONSOLE("Generated appup for ~s~n", [AppName]),
             write_appup(AppupPath, Appup)
     end.
 
 
-make_appup(OldRelPath, NewRelpath, AppName, OldVsn, NewVsn) ->
+gen_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn) ->
     OldEbin = ebin_dir(OldRelPath, AppName, OldVsn),
     NewEbin = ebin_dir(NewRelPath, AppName, NewVsn),
 
@@ -105,7 +112,7 @@ make_appup(OldRelPath, NewRelpath, AppName, OldVsn, NewVsn) ->
     Added = [{added, A} || A <- Added0],
     Changed = [{changed, C} || C <- Changed0],
 
-    UpFrom = rebar_knit_kmod:render(Removed ++ Added ++ Changed)
+    UpFrom = rebar_knit_kmod:render(Removed ++ Added ++ Changed),
     DownTo = [{apply, {erlang, error, [downgrade_not_supported]}}],
 
     {NewVsn, [{OldVsn, UpFrom}, {OldVsn, DownTo}]}.
@@ -120,17 +127,17 @@ write_appup(AppupPath, Appup) ->
             ok;
         {error, Error} ->
             Reason = file:format_error(Error),
-            ?ABORT("Failed to write ~s: ~s", [Filename, Reason])
+            ?ABORT("Failed to write ~s: ~s", [AppupPath, Reason])
     end.
 
 
 appup_path(RelPath, AppName, AppVsn) ->
-    BaseName = AppName ++ ".appup",
+    BaseName = atom_to_list(AppName) ++ ".appup",
     filename:join([ebin_dir(RelPath, AppName, AppVsn), BaseName]).
 
 
 ebin_dir(RelPath, AppName, AppVsn) ->
-    AppDir = AppName ++ "-" ++ AppVsn,
+    AppDir = atom_to_list(AppName) ++ "-" ++ AppVsn,
     EbinDir = filename:join([RelPath, "lib", AppDir, "ebin"]),
     case filelib:is_dir(EbinDir) of
         true ->
