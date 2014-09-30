@@ -115,7 +115,7 @@ gen_appup(OldRelPath, NewRelPath, AppName, OldVsn, NewVsn) ->
     UpFrom = rebar_knit_kmod:render(Removed ++ Added ++ Changed),
     DownTo = [{apply, {erlang, error, [downgrade_not_supported]}}],
 
-    {NewVsn, [{OldVsn, UpFrom}, {OldVsn, DownTo}]}.
+    {NewVsn, [{OldVsn, UpFrom}], [{OldVsn, DownTo}]}.
 
 
 write_appup(AppupPath, Appup) ->
