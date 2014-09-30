@@ -97,7 +97,7 @@ new_kmod({changed, {_OldBeamFile, NewBeamFile}}) ->
     new_kmod(update, NewBeamFile);
 new_kmod({removed, BeamFile}) ->
     Name = filename:rootname(filename:basename(BeamFile)),
-    #kmod{name=list_to_atom(Name), action=delete}.
+    #kmod{name=list_to_atom(Name), action=delete, priority=-1}.
 
 
 new_kmod(Action, BeamFile) ->
