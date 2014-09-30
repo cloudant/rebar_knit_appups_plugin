@@ -100,7 +100,7 @@ new_kmod({removed, BeamFile}) ->
     #kmod{
         name = list_to_atom(Name),
         action = delete,
-        priority = -1
+        priority = -1,
         apply_funs = []
     }.
 
