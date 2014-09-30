@@ -14,14 +14,14 @@
 
 
 -export([
-    'pre_generate-appup'/2
+    'pre_generate-appups'/2
 ]).
 
 
 -include("rebar_knit_appups_plugin.hrl").
 
 
-'pre_generate-appup'(Config, ReltoolFile) ->
+'pre_generate-appups'(Config, ReltoolFile) ->
     case rebar_rel_utils:is_rel_dir() of
         {true, _} ->
             generate(Config, ReltoolFile);
